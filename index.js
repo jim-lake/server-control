@@ -23,7 +23,7 @@ var DEFAULT_CONFIG = {
     restart_function: default_restart_function,
     service_port: 3000,
     http_proto: 'http',
-    auth_middleware: function(req,res,next) { next(); },
+    auth_middleware: false,
     repo_dir: '.',
 };
 
@@ -58,8 +58,13 @@ function init(app, config)
 
 function addRoutes(app,prefix)
 {
-    app.get('/service_data',g_config.auth_middleware,service_data);
-    app.get('/update_service',g_config.auth_middleware,update_service);
+    var auth = function(req,res,next) { next(); };
+    if( g_config.auth_middleware )
+    {
+        auth = g_config.auth_middleware;
+    }
+    app.get('/service_data',auth,service_data);
+    app.get('/update_service',auth,update_service);
 
     app.get('/server_version',secret_or_auth,server_version);
     app.get('/update_server',secret_or_auth,update_server);
@@ -71,9 +76,13 @@ function secret_or_auth(req,res,next)
     {
         next();
     }
-    else
+    else if( g_config.auth_middleware )
     {
         g_config.auth_middleware(req,res,next);
+    }
+    else
+    {
+        res.send(403);
     }
 }
 
