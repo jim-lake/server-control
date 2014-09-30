@@ -34,5 +34,7 @@ if [ "$?" -ne 0 ]; then
         echo " - Revert Success."
     fi
     exit 1
+else
+    npm install
 fi
 exit 0
