@@ -356,6 +356,8 @@ function update_service(req,res)
     
     var hash = required_prop(req,'hash');
     
+    var ami_id = req.params('ami_id',false);
+    
     var autoscaling = new AWS.AutoScaling();
     var service_data = false;
     var launch_config_name = false;
@@ -414,6 +416,10 @@ function update_service(req,res)
             BlockDeviceMappings: service_data.launch_configuration.BlockDeviceMappings,
             UserData: new Buffer(user_data).toString('base64'),
         };
+        if( ami_id )
+        {
+            params.ImageId = ami_id;
+        }
         autoscaling.createLaunchConfiguration(params,function(err,data)
         {
             if( err )
