@@ -1,0 +1,27 @@
+{
+  "name": "server-control",
+  "version": "0.0.1",
+  "description": "Easy updating of Amazon AWS isntances inside of an Autoscale Group",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "aws",
+    "update",
+    "asg",
+    "ec2"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:jim-lake/server-control.git"
+  }, 
+  "author": "Jim Lake (module help by Yanko Bolanos)",
+  "license": "BSD",
+  "dependencies": {
+    "aws-sdk": "*",
+    "async": "*",
+    "request": "*",
+    "underscore": "*"
+  }
+}
