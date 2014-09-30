@@ -382,11 +382,11 @@ function update_service(req,res)
         {
             if( !err )
             {
-                // remove current hash key
+                // remove current hash key and empty lines
                 current_user_data = "";
                 _.each(data.split('\n'), function(line)
                 {
-                    if( line.indexOf(g_config.git_hash_var_name) == -1 )
+                    if( line.length > 0 && line.indexOf(g_config.git_hash_var_name) == -1 )
                     {
                         current_user_data += line + '\n';
                     }
