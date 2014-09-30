@@ -410,12 +410,22 @@ function update_service(req,res)
         
         var user_data = current_user_data;
         user_data += "{0}={1}\n".format(g_config.git_hash_var_name, hash);
-        var params = {
-            LaunchConfigurationName: launch_config_name,
-            InstanceId: service_data.instance_id,
-            BlockDeviceMappings: service_data.launch_configuration.BlockDeviceMappings,
-            UserData: new Buffer(user_data).toString('base64'),
-        };
+        
+        var props = [
+            'ImageId',
+            'SecurityGroups',
+            'BlockDeviceMappings',
+            'InstanceType',
+            'InstanceMonitoring',
+            'EbsOptimized',
+            'AssociatePublicIpAddress',
+            'PlacementTenancy',
+        ];
+
+        var params = _.pick(service_data.launch_configuration,props);
+        params.InstanceId = service_data.instance_id;
+        params.LaunchConfigurationName = launch_config_name;
+        params.UserData = new Buffer(user_data).toString('base64');
         if( ami_id )
         {
             params.ImageId = ami_id;
