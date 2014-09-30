@@ -7,51 +7,82 @@ var request = require('request');
 var child_process = require('child_process');
 var util = require('./utils.js');
 
-exports.init_server_control = init_server_control;
+exports.init = init;
 
-var region = false;
-var repo_url = false;
-var repo_dir = false;
-var service_port = 3000;
-var GIT_HASH_VAR_NAME='API_GIT_HASH';
-var SECRET = false;
-var git_commit_hash = false;
-var restart_function = false;
+var g_config = {};
 
 get_aws_region(function(err, region)
 {
     AWS.config.update({region: region});
 });
 
+var DEFAULT_CONFIG = {
+    prefix: '/',
+    secret: 'secret',
+    git_hash_var_name: 'NODE_GIT_HASH',
+    restart_function: default_restart_function,
+    service_port: 3000,
+    http_proto: 'http',
+    auth_middleware: function(req,res,next) { next(); },
+    repo_dir: '.',
+};
 
-function init_server_control(app, config)
+function default_restart_function()
 {
-    prefix = config.prefix || '/';
-    repo_dir = config.repo_dir;
-    repo_url = config.repo_url;
-    SECRET = config.secret || false;
-    restart_function = config.restart_function || false;
-    GIT_HASH_VAR_NAME = config.git_hash_var_name || GIT_HASH_VAR_NAME;
-    service_port = config.service_port || service_port;
+    console.log("Successful update, restarting server");
+    setTimeout(function()
+    {
+        process.exit(0);
+    },100);
+}
 
-    get_git_commit_hash(repo_dir);
+var REQUIRED_CONFIG_ITEMS = [
+    'repo_url',
+];
 
-    addRoutes(app, prefix);
+function init(app, config)
+{
+    var missing = _.difference(REQUIRED_CONFIG_ITEMS,_.keys(config));
+    if( missing.length > 0 )
+    {
+        console.error("server-control: Add required elements to config.json:",missing);
+        throw 'server-control config failed';
+    }
+
+    g_config = _.extend({},DEFAULT_CONFIG,config);
+
+    get_git_commit_hash();
+
+    addRoutes(app,g_config.prefix);
 }
 
 function addRoutes(app,prefix)
 {
-    app.get('/server_version',server_version);
-    app.get('/service_data',service_data);
-    app.get('/update_server',update_server);
-    app.get('/update_service',update_service);
+    app.get('/service_data',g_config.auth_middleware,service_data);
+    app.get('/update_service',g_config.auth_middleware,update_service);
+
+    app.get('/server_version',secret_or_auth,server_version);
+    app.get('/update_server',secret_or_auth,update_server);
+}
+
+function secret_or_auth(req,res,next)
+{
+    if( req.body && req.body.secret && req.body.secret === g_config.secret )
+    {
+        next();
+    }
+    else
+    {
+        g_config.auth_middleware(req,res,next);
+    }
 }
 
 
 function server_version(req,res)
 {
     res.header("Cache-Control", "no-cache, no-store, must-revalidate");
-    get_git_commit_hash(repo_dir, function(err,results)
+    
+    get_git_commit_hash(function(err,results)
     {
         if( err )
         {
@@ -70,23 +101,30 @@ function service_data(req,res)
     
     get_service_data(function(err,result)
     {
-        console.log(result);
         var ret = {
             master_git_hash: result.master_git_hash,
             instance_id: result.instance_id,
-            auto_scale_group: {
+            instance_list: result.instance_list,
+        };
+        
+        if( result.auto_scale_group )
+        {
+            ret.auto_scale_group = {
                 name: result.auto_scale_group.AutoScalingGroupName,
                 launch_configuration: {
                     name: result.auto_scale_group.LaunchConfigurationName,
-                    user_data: new Buffer(result.launch_configuration.UserData, 'base64').toString('ascii'),
                 },
-            },
-            instance_list: result.instance_list,
-        };
+            };
+        }
+        if( result.launch_configuration && result.launch_configuration.UserData )
+        {
+            var s = new Buffer(result.launch_configuration.UserData, 'base64').toString('ascii');
+            ret.auto_scale_group.launch_configuration.user_data = s;
+        }
     
         if( err )
         {
-            res.send(500,ret);
+            res.send(500,{ err: err, ret: ret } );
         }
         else
         {
@@ -199,7 +237,7 @@ function get_service_data(all_done)
         var query_list = _.where(instance_list,{ state: "running" });
         async.each(query_list,function(instance,done2)
         {
-            var url = "http://{0}:{1}/server_version".format(instance.private_ip, service_port);
+            var url = "{0}://{1}:{2}{3}server_version".format(g_config.http_proto,instance.private_ip,g_config.service_port,g_config.prefix);
             var options = {
                 url: url,
                 method: 'GET',
@@ -250,12 +288,6 @@ function update_server(req,res)
     res.header("Cache-Control", "no-cache, no-store, must-revalidate");
     
     var hash = required_prop(req,'hash');
-    var secret = required_prop(req,'secret');
-
-    if (secret != SECRET)
-    {
-        throw 'secret error';
-    }
     
     internal_update_server(hash,function(err)
     {
@@ -265,19 +297,7 @@ function update_server(req,res)
         }
         else
         {
-
-            if (typeof restart_function == 'function')
-            {
-                restart_function();
-            } else 
-            {
-                console.log("Successful update, restarting server");
-                setTimeout(function()
-                {
-                    process.exit(0);
-                },100);
-            }
-
+            g_config.restart_function();
             res.send(200,"Restarting server");
         }
     });
@@ -290,7 +310,7 @@ function internal_update_server(hash,all_done)
     async.series([
     function(done)
     {
-        get_git_commit_hash(repo_dir, function(err,old_hash)
+        get_git_commit_hash(function(err,old_hash)
         {
             revert_hash = old_hash;
             done(err);
@@ -305,12 +325,8 @@ function internal_update_server(hash,all_done)
             if( err )
             {
                 err = error_log("update_version: git_update_to_hash.sh failed with err:",err,"stdout:",stdout,"stderr:",stderr);
-                done(err);
             }
-            else
-            {
-                done();
-            }
+            done(err);
         });
     }],
     all_done);
@@ -321,12 +337,6 @@ function update_service(req,res)
     res.header("Cache-Control", "no-cache, no-store, must-revalidate");
     
     var hash = required_prop(req,'hash');
-    var secret = required_prop(req,'secret');
-
-    if (secret != SECRET)
-    {
-        throw 'secret error';
-    }
     
     var autoscaling = new AWS.AutoScaling();
     var service_data = false;
@@ -424,18 +434,7 @@ function update_service(req,res)
         {
             var msg = "Successful updating all servers, restarting this server.";
 
-            if( typeof restart_function == 'function' )
-            {
-                restart_function();
-            } 
-            else 
-            {
-                console.log(msg);
-                setTimeout(function()
-                {
-                    process.exit(0);
-                },100);
-            }
+            g_config.restart_function();
 
             var ret = {
                 launch_config_name: launch_config_name,
@@ -457,7 +456,7 @@ function update_all_servers(service_data,all_done)
         }
         else
         {
-            var url = "http://{0}:{1}/update_server".format(instance.private_ip, service_port);
+            var url = "{0}://{1}:{2}{3}update_server".format(g_config.http_proto,instance.private_ip,service_port,g_config.prefix);
             var options = {
                 url: url,
                 method: 'GET',
@@ -518,7 +517,7 @@ function get_auto_scale_group(instance_id,done)
 
 function get_master_git_hash(done)
 {
-    var cmd = 'cd {0} && git ls-remote {1} refs/heads/master | cut -f 1'.format(repo_dir, repo_url);
+    var cmd = 'cd {0} && git ls-remote {1} refs/heads/master | cut -f 1'.format(g_config.repo_dir,g_config.repo_url);
     child_process.exec(cmd,function(err,stdout,stderr)
     {
         var ret = false;
@@ -528,7 +527,7 @@ function get_master_git_hash(done)
         }
         else
         {
-            var ret = stdout.trim();
+            ret = stdout.trim();
             if( ret.length != 40 )
             {
                 err = 'bad_git_hash';
@@ -538,22 +537,33 @@ function get_master_git_hash(done)
     });
 }
 
-function get_git_commit_hash(repo_dir, done)
+var g_git_commit_hash = false;
+
+function get_git_commit_hash(done)
 {
-    if( git_commit_hash )
+    if( !done )
     {
-        done(null, git_commit_hash);
+        done = function() {};
+    }
+
+    if( g_git_commit_hash )
+    {
+        done(null, g_git_commit_hash);
     } 
     else 
     {
-        var cmd = 'cd {0} && git rev-parse HEAD'.format(repo_dir);
+        var cmd = 'cd {0} && git log -n 1 --pretty=format:"%H"'.format(g_config.repo_dir);
         child_process.exec(cmd, function(err,stdout,stderr)
         {
-            git_commit_hash = stdout.slice(0,stdout.length-1);
-            if ( typeof callback !== 'undefined' && callback )
+            if( err )
             {
-                done(err, git_commit_hash);
+                error_log("get_git_commit_hash: failed with err:",err,stdout,stderr);
             }
+            else
+            {
+                g_git_commit_hash = stdout.trim();
+            }
+            done(null,g_git_commit_hash);
         });
     }
 }
@@ -584,7 +594,7 @@ function get_current_user_data(done)
     {
         if( err )
         {
-            error_log('failed to get user data. Running locally?');
+            error_log("failed to get user data. Running locally?");
         } 
         done(err, data);
     }); 
@@ -596,11 +606,7 @@ function get_aws_region(done)
     m.request('/latest/dynamic/instance-identity/document',function(err,results)
     {
         var region = false;
-        if( err )
-        {
-            error_log('failed to get region. Running locally?');
-        } 
-        else 
+        if( !err )
         {
             try
             {

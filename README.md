@@ -9,7 +9,7 @@ sample config to add to your app:
 
 ```javascript
 
-sc.init_server_control(app, {
+sc.init(app, {
 	prefix: '/',
     repo_url: 'git@github.com:user/project.git',
     repo_dir: '/var/node/project',
