@@ -234,6 +234,7 @@ function get_service_data(all_done)
                     {
                         instance_list.push({
                             instance_id: instance.InstanceId,
+                            image_id: instance.ImageId,
                             state: instance.State.Name,
                             instance_type: instance.InstanceType,
                             launch_datetime: instance.LaunchTime,
