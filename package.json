@@ -1,6 +1,6 @@
 {
   "name": "server-control",
-  "version": "0.0.1",
+  "version": "0.1",
   "description": "Easy updating of Amazon AWS isntances inside of an Autoscale Group",
   "main": "index.js",
   "scripts": {
@@ -17,8 +17,7 @@
     "url": "git@github.com:jim-lake/server-control.git"
   },
   "author": {
-    "name": "Jim Lake",
-    "url": "module help by Yanko Bolanos"
+    "name": "Jim Lake, module help by Yanko Bolanos"
   },
   "license": "BSD",
   "dependencies": {
@@ -26,15 +25,5 @@
     "async": "*",
     "request": "*",
     "underscore": "*"
-  },
-  "readme": "# server-control\n\n* create AMI with supervisor, git and node\n* create user node with home in /var/node\n* add an ssh pull only key to the node user in /var/node/.ssh/id_rsa\n* clone your project\n\nsample config to add to your app:\n\n```javascript\n\nsc.init_server_control(app, {\n\tprefix: '/',\n    repo_url: 'git@github.com:user/project.git',\n    repo_dir: '/var/node/project',\n    service_port: port,\n    secret: \"update-secret\"\n});\n\n```\n\n* npm install jim-lake/server-control --save\n* cp node_modules/server-control/git_update_to_hash.sh /var/node/project/git_update_to_hash.sh\n* chmod +x git_update_to_hash.sh\n* cp node_modules/server-control/api_update.sh /var/lib/cloud/scripts/per-instance/api_update.sh\n* chmod +x /var/lib/cloud/scripts/per-instance/api_update.sh \n\n* create an Autoscale group with that AMI.\n* pass the project dir and git HASH in your user datain the user-data:\n```bash\nPROJECT_DIR=/var/node/project\nAPI_GIT_HASH=6c3xxx12348e2e97560e0081d3bf44bdbfb8ifn3\n```\n* launch!\n",
-  "readmeFilename": "README.md",
-  "bugs": {
-    "url": "https://github.com/jim-lake/server-control/issues"
-  },
-  "homepage": "https://github.com/jim-lake/server-control",
-  "_id": "server-control@0.0.1",
-  "_shasum": "f61f2376fe7bb4b67781ba1efaa3e17340920d74",
-  "_resolved": "git://github.com/jim-lake/server-control#185445d7a50b1bac214b315faa976c86c25e298a",
-  "_from": "server-control@git://github.com/jim-lake/server-control"
+  }
 }
