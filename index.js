@@ -446,7 +446,7 @@ function update_service(req,res)
     },
     function(done)
     {
-        update_all_servers(service_data,done);
+        update_all_servers(hash,service_data,done);
     }],
     function(err,results)
     {
@@ -470,7 +470,7 @@ function update_service(req,res)
     });
 }
 
-function update_all_servers(service_data,all_done)
+function update_all_servers(hash,service_data,all_done)
 {
     async.each(service_data.instance_list,function(instance,done)
     {
