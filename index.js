@@ -125,10 +125,14 @@ function service_data(req,res)
                 },
             };
         }
-        if( result.launch_configuration && result.launch_configuration.UserData )
+        if( result.launch_configuration )
         {
-            var s = new Buffer(result.launch_configuration.UserData, 'base64').toString('ascii');
-            ret.auto_scale_group.launch_configuration.user_data = s;
+            ret.auto_scale_group.launch_configuration.image_id = result.launch_configuration.ImageId;
+            if( result.launch_configuration.UserData )
+            {
+                var s = new Buffer(result.launch_configuration.UserData, 'base64').toString('ascii');
+                ret.auto_scale_group.launch_configuration.user_data = s;
+            }
         }
     
         if( err )
@@ -330,13 +334,14 @@ function internal_update_server(hash,all_done)
     },
     function(done)
     {
-        var cmd = "./git_update_to_hash.sh {0} {1}".format(hash,revert_hash);
-        console.log("update cmd: ",cmd);
+        var cmd = "cd {0} && {1}/git_update_to_hash.sh {2} {3}".format(g_config.repo_dir,__dirname,hash,revert_hash);
+        console.error("update cmd: ",cmd);
         child_process.exec(cmd,function(err,stdout,stderr)
         {
             if( err )
             {
-                err = error_log("update_version: git_update_to_hash.sh failed with err:",err,"stdout:",stdout,"stderr:",stderr);
+                error_log("update_version: git_update_to_hash.sh failed with err:",err,"stdout:",stdout,"stderr:",stderr);
+                err = "update_version: update failed";
             }
             done(err);
         });
@@ -378,7 +383,7 @@ function update_service(req,res)
                 current_user_data = "";
                 _.each(data.split('\n'), function(line)
                 {
-                    if( line.indexOf(GIT_HASH_VAR_NAME) == -1 )
+                    if( line.indexOf(g_config.git_hash_var_name) == -1 )
                     {
                         current_user_data += line + '\n';
                     }
@@ -401,7 +406,7 @@ function update_service(req,res)
         }
         
         var user_data = current_user_data;
-        user_data += "{0}={1}\n".format(GIT_HASH_VAR_NAME, hash);
+        user_data += "{0}={1}\n".format(g_config.git_hash_var_name, hash);
         var params = {
             LaunchConfigurationName: launch_config_name,
             InstanceId: service_data.instance_id,
@@ -608,6 +613,7 @@ function get_current_user_data(done)
         if( err )
         {
             error_log("failed to get user data. Running locally?");
+            data = "";
         } 
         done(err, data);
     }); 
