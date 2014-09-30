@@ -480,7 +480,7 @@ function update_all_servers(service_data,all_done)
         }
         else
         {
-            var url = "{0}://{1}:{2}{3}update_server".format(g_config.http_proto,instance.private_ip,service_port,g_config.prefix);
+            var url = "{0}://{1}:{2}{3}update_server".format(g_config.http_proto,instance.private_ip,g_config.service_port,g_config.prefix);
             var options = {
                 strictSSL: false,
                 url: url,
