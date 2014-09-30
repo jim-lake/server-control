@@ -248,9 +248,12 @@ function get_service_data(all_done)
         {
             var url = "{0}://{1}:{2}{3}server_version".format(g_config.http_proto,instance.private_ip,g_config.service_port,g_config.prefix);
             var options = {
+                strictSSL: false,
                 url: url,
                 method: 'GET',
-                json: {},
+                json: {
+                    secret: g_config.secret,
+                },
             };
             request(options,function(err,response,body)
             {
@@ -467,11 +470,12 @@ function update_all_servers(service_data,all_done)
         {
             var url = "{0}://{1}:{2}{3}update_server".format(g_config.http_proto,instance.private_ip,service_port,g_config.prefix);
             var options = {
+                strictSSL: false,
                 url: url,
                 method: 'GET',
                 json: {
                     hash: hash,
-                    secret: SECRET,
+                    secret: g_config.secret,
                 },
             };
             request(options,function(err,response,body)
