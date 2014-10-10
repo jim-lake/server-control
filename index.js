@@ -71,13 +71,13 @@ function secret_or_auth(req,res,next)
     {
         next();
     }
-    else if( g_config.auth_middleware )
+    else if( false && g_config.auth_middleware )
     {
         g_config.auth_middleware(req,res,next);
     }
     else
     {
-        res.send(403);
+        res.status(403).end('Forbidden');
     }
 }
 
@@ -90,7 +90,7 @@ function server_version(req,res)
     {
         if( err )
         {
-            res.send(500);
+            res.status(500).end('Internal Server Error');
         }
         else
         {
@@ -132,7 +132,7 @@ function service_data(req,res)
     
         if( err )
         {
-            res.send(500,{ err: err, ret: ret } );
+            res.status(500).send({ err: err, ret: ret });
         }
         else
         {
@@ -305,12 +305,12 @@ function update_server(req,res)
     {
         if( err )
         {
-            res.send(500,err);
+            res.status(500).send(err);
         }
         else
         {
             g_config.restart_function();
-            res.send(200,"Restarting server");
+            res.send("Restarting server");
         }
     });
 }
@@ -457,7 +457,7 @@ function update_service(req,res)
     {
         if( err )
         {
-            res.send(500,err);
+            res.status(500).send(err);
         }
         else
         {
@@ -470,7 +470,7 @@ function update_service(req,res)
                 _msg: msg,
             };
             
-            res.send(200, ret);
+            res.send(ret);
         }
     });
 }
