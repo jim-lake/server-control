@@ -58,13 +58,8 @@ function init(app, config)
 
 function addRoutes(app,prefix)
 {
-    var auth = function(req,res,next) { next(); };
-    if( g_config.auth_middleware )
-    {
-        auth = g_config.auth_middleware;
-    }
-    app.get('/service_data',auth,service_data);
-    app.get('/update_service',auth,update_service);
+    app.get('/service_data',secret_or_auth,service_data);
+    app.get('/update_service',secret_or_auth,update_service);
 
     app.get('/server_version',secret_or_auth,server_version);
     app.get('/update_server',secret_or_auth,update_server);
