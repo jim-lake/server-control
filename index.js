@@ -71,7 +71,7 @@ function secret_or_auth(req,res,next)
     {
         next();
     }
-    else if( false && g_config.auth_middleware )
+    else if( g_config.auth_middleware )
     {
         g_config.auth_middleware(req,res,next);
     }
