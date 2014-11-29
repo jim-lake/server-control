@@ -5,7 +5,6 @@ var AWS = require('aws-sdk');
 var _ = require('underscore');
 var request = require('request');
 var child_process = require('child_process');
-var util = require('./utils.js');
 
 exports.init = init;
 
@@ -246,7 +245,7 @@ function get_service_data(all_done)
         var query_list = _.where(instance_list,{ state: "running" });
         async.each(query_list,function(instance,done2)
         {
-            var url = "{0}://{1}:{2}{3}server_version".format(g_config.http_proto,instance.private_ip,g_config.service_port,g_config.prefix);
+            var url = str_format("{0}://{1}:{2}{3}server_version",g_config.http_proto,instance.private_ip,g_config.service_port,g_config.prefix);
             var options = {
                 strictSSL: false,
                 url: url,
@@ -330,7 +329,7 @@ function internal_update_server(hash,all_done)
     },
     function(done)
     {
-        var cmd = "cd {0} && {1}/git_update_to_hash.sh {2} {3}".format(g_config.repo_dir,__dirname,hash,revert_hash);
+        var cmd = str_format("cd {0} && {1}/git_update_to_hash.sh {2} {3}",g_config.repo_dir,__dirname,hash,revert_hash);
         console.error("update cmd: ",cmd);
         child_process.exec(cmd,function(err,stdout,stderr)
         {
@@ -404,7 +403,7 @@ function update_service(req,res)
         }
         
         var user_data = current_user_data;
-        user_data += "{0}={1}\n".format(g_config.git_hash_var_name, hash);
+        user_data += str_format("{0}={1}\n",g_config.git_hash_var_name, hash);
         
         var props = [
             'ImageId',
@@ -485,7 +484,7 @@ function update_all_servers(hash,service_data,all_done)
         }
         else
         {
-            var url = "{0}://{1}:{2}{3}update_server".format(g_config.http_proto,instance.private_ip,g_config.service_port,g_config.prefix);
+            var url = str_format("{0}://{1}:{2}{3}update_server",g_config.http_proto,instance.private_ip,g_config.service_port,g_config.prefix);
             var options = {
                 strictSSL: false,
                 url: url,
@@ -547,7 +546,7 @@ function get_auto_scale_group(instance_id,done)
 
 function get_master_git_hash(done)
 {
-    var cmd = 'cd {0} && git ls-remote {1} refs/heads/master | cut -f 1'.format(g_config.repo_dir,g_config.repo_url);
+    var cmd = str_format("cd {0} && git ls-remote {1} refs/heads/master | cut -f 1",g_config.repo_dir,g_config.repo_url);
     child_process.exec(cmd,function(err,stdout,stderr)
     {
         var ret = false;
@@ -582,7 +581,7 @@ function get_git_commit_hash(done)
     } 
     else 
     {
-        var cmd = 'cd {0} && git log -n 1 --pretty=format:"%H"'.format(g_config.repo_dir);
+        var cmd = str_format("cd {0} && git log -n 1 --pretty=format:\"%H\"",g_config.repo_dir);
         child_process.exec(cmd, function(err,stdout,stderr)
         {
             if( err )
@@ -653,4 +652,13 @@ function get_aws_region(done)
     });
 }
 
-
+function str_format()
+{
+    var str = arguments[0];
+    var args = arguments;
+    return str.replace(/{(\d+)}/g, function(match, number) {
+        var arg_num = parseInt(number) + 1;
+        return typeof args[arg_num] != 'undefined' ?
+            args[arg_num] : '{' + number + '}';
+    });
+}
