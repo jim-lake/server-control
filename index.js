@@ -70,6 +70,10 @@ function secret_or_auth(req,res,next)
     {
         next();
     }
+    else if( req.cookies && req.cookies.secret && req.cookies.secret === g_config.secret )
+    {
+        next();
+    }
     else if( g_config.auth_middleware )
     {
         g_config.auth_middleware(req,res,next);
