@@ -31,4 +31,38 @@ sc.init(app, {
 PROJECT_DIR=/var/node/project
 API_GIT_HASH=6c3xxx12348e2e97560e0081d3bf44bdbfb8ifn3
 ```
+* assign an IAM role with the following configuration:
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "Stmt1412101976000",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeInstances",
+        "ec2:AssociateAddress",
+        "ec2: DisassociateAddress"
+      ],
+      "Resource": [
+        "*"
+      ]
+    },
+    {
+      "Sid": "Stmt1412102095000",
+      "Effect": "Allow",
+      "Action": [
+        "autoscaling:CreateLaunchConfiguration",
+        "autoscaling:DescribeAutoScalingGroups",
+        "autoscaling:DescribeLaunchConfigurations",
+        "autoscaling:UpdateAutoScalingGroup"
+      ],
+      "Resource": [
+        "*"
+      ]
+    }
+  ]
+}
+```
+
 * launch!
