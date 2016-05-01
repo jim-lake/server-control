@@ -59,27 +59,32 @@ function init(app, config)
 
 function addRoutes(app,prefix)
 {
-    app.get('/service_data',
+    var prefix = g_config.prefix;
+    if (prefix.length > 0 && prefix[prefix.length - 1] == '/') {
+        prefix = prefix.slice(0,-1);
+    }
+
+    app.get(prefix + '/service_data',
         body_parser.json(),
-        body_parser.urlencoded(),
+        body_parser.urlencoded({ extended: false }),
         cookie_parser(),
         secret_or_auth,
         service_data);
-    app.get('/update_service',
+    app.get(prefix + '/update_service',
         body_parser.json(),
-        body_parser.urlencoded(),
+        body_parser.urlencoded({ extended: false }),
         cookie_parser(),
         secret_or_auth,
         update_service);
-    app.get('/server_version',
+    app.get(prefix + '/server_version',
         body_parser.json(),
-        body_parser.urlencoded(),
+        body_parser.urlencoded({ extended: false }),
         cookie_parser(),
         secret_or_auth,
         server_version);
-    app.get('/update_server',
+    app.get(prefix + '/update_server',
         body_parser.json(),
-        body_parser.urlencoded(),
+        body_parser.urlencoded({ extended: false }),
         cookie_parser(),
         secret_or_auth,
         update_server);
@@ -178,6 +183,14 @@ function get_service_data(all_done)
     var master_git_hash = false;
 
     async.series([
+    function(done)
+    {
+        get_master_git_hash(function(err,hash)
+        {
+            master_git_hash = hash;
+            done(err);
+        });
+    },
     function(done)
     {
         var meta = new AWS.MetadataService();
@@ -304,14 +317,6 @@ function get_service_data(all_done)
                 done2(err);
             });
         }, done);
-    },
-    function(done)
-    {
-        get_master_git_hash(function(err,hash)
-        {
-            master_git_hash = hash;
-            done(err);
-        });
     }],
     function(err)
     {
