@@ -1,6 +1,6 @@
 {
   "name": "server-control",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Easy updating of Amazon AWS isntances inside of an Autoscale Group",
   "main": "index.js",
   "scripts": {
@@ -19,11 +19,13 @@
   "author": {
     "name": "Jim Lake, module help by Yanko Bolanos"
   },
-  "license": "BSD",
+  "license": "MIT",
   "dependencies": {
-    "aws-sdk": "*",
-    "async": "*",
-    "request": "*",
-    "underscore": "*"
+    "aws-sdk": "2.3.7",
+    "async": "1.5.2",
+    "request": "2.72.0",
+    "underscore": "1.8.3",
+    "cookie-parser": "1.4.1",
+    "body-parser": "1.15.0"
   }
 }

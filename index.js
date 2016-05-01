@@ -5,6 +5,8 @@ var AWS = require('aws-sdk');
 var _ = require('underscore');
 var request = require('request');
 var child_process = require('child_process');
+var cookie_parser = require('cookie-parser');
+var body_parser = require('body-parser');
 
 exports.init = init;
 
@@ -57,16 +59,39 @@ function init(app, config)
 
 function addRoutes(app,prefix)
 {
-    app.get('/service_data',secret_or_auth,service_data);
-    app.get('/update_service',secret_or_auth,update_service);
-
-    app.get('/server_version',secret_or_auth,server_version);
-    app.get('/update_server',secret_or_auth,update_server);
+    app.get('/service_data',
+        body_parser.json(),
+        body_parser.urlencoded(),
+        cookie_parser(),
+        secret_or_auth,
+        service_data);
+    app.get('/update_service',
+        body_parser.json(),
+        body_parser.urlencoded(),
+        cookie_parser(),
+        secret_or_auth,
+        update_service);
+    app.get('/server_version',
+        body_parser.json(),
+        body_parser.urlencoded(),
+        cookie_parser(),
+        secret_or_auth,
+        server_version);
+    app.get('/update_server',
+        body_parser.json(),
+        body_parser.urlencoded(),
+        cookie_parser(),
+        secret_or_auth,
+        update_server);
 }
 
 function secret_or_auth(req,res,next)
 {
-    if( req.body && req.body.secret && req.body.secret === g_config.secret )
+    if( req.headers && req.headers['x-sc-secret'] == g_config.secret)
+    {
+        next();
+    }
+    else if( req.body && req.body.secret && req.body.secret === g_config.secret )
     {
         next();
     }
@@ -88,7 +113,7 @@ function secret_or_auth(req,res,next)
 function server_version(req,res)
 {
     res.header("Cache-Control", "no-cache, no-store, must-revalidate");
-    
+
     get_git_commit_hash(function(err,results)
     {
         if( err )
@@ -105,7 +130,7 @@ function server_version(req,res)
 function service_data(req,res)
 {
     res.header("Cache-Control", "no-cache, no-store, must-revalidate");
-    
+
     get_service_data(function(err,result)
     {
         var ret = {
@@ -113,7 +138,7 @@ function service_data(req,res)
             instance_id: result.instance_id,
             instance_list: result.instance_list,
         };
-        
+
         if( result.auto_scale_group )
         {
             ret.auto_scale_group = {
@@ -132,7 +157,7 @@ function service_data(req,res)
                 ret.auto_scale_group.launch_configuration.user_data = s;
             }
         }
-    
+
         if( err )
         {
             res.status(500).send({ err: err, ret: ret });
@@ -151,7 +176,7 @@ function get_service_data(all_done)
     var instance_list = false;
     var launch_configuration = false;
     var master_git_hash = false;
-    
+
     async.series([
     function(done)
     {
@@ -254,6 +279,9 @@ function get_service_data(all_done)
                 strictSSL: false,
                 url: url,
                 method: 'GET',
+                headers: {
+                    'x-sc-secret': g_config.secret,
+                },
                 json: {
                     secret: g_config.secret,
                 },
@@ -301,9 +329,9 @@ function get_service_data(all_done)
 function update_server(req,res)
 {
     res.header("Cache-Control", "no-cache, no-store, must-revalidate");
-    
+
     var hash = required_prop(req,'hash');
-    
+
     internal_update_server(hash,function(err)
     {
         if( err )
@@ -321,7 +349,7 @@ function update_server(req,res)
 function internal_update_server(hash,all_done)
 {
     var revert_hash = false;
-    
+
     async.series([
     function(done)
     {
@@ -351,16 +379,16 @@ function internal_update_server(hash,all_done)
 function update_service(req,res)
 {
     res.header("Cache-Control", "no-cache, no-store, must-revalidate");
-    
+
     var hash = required_prop(req,'hash');
-    
+
     var ami_id = req.param('ami_id',false);
-    
+
     var autoscaling = new AWS.AutoScaling();
     var service_data = false;
     var launch_config_name = false;
     var current_user_data = false;
-    
+
     async.series([
     function(done)
     {
@@ -405,10 +433,10 @@ function update_service(req,res)
             var new_index = parseInt(match[2]) + 1;
             launch_config_name = match[1] + new_index;
         }
-        
+
         var user_data = current_user_data;
         user_data += str_format("{0}={1}\n",g_config.git_hash_var_name, hash);
-        
+
         var props = [
             'ImageId',
             'SecurityGroups',
@@ -472,7 +500,7 @@ function update_service(req,res)
                 launch_config_name: launch_config_name,
                 _msg: msg,
             };
-            
+
             res.send(ret);
         }
     });
@@ -493,6 +521,9 @@ function update_all_servers(hash,service_data,all_done)
                 strictSSL: false,
                 url: url,
                 method: 'GET',
+                headers: {
+                    'x-sc-secret': g_config.secret,
+                },
                 json: {
                     hash: hash,
                     secret: g_config.secret,
@@ -523,7 +554,7 @@ function update_all_servers(hash,service_data,all_done)
 function get_auto_scale_group(instance_id,done)
 {
     var autoscaling = new AWS.AutoScaling();
-    
+
     autoscaling.describeAutoScalingGroups({}, function(err, data)
     {
         if( err )
@@ -582,8 +613,8 @@ function get_git_commit_hash(done)
     if( g_git_commit_hash )
     {
         done(null, g_git_commit_hash);
-    } 
-    else 
+    }
+    else
     {
         var cmd = str_format("cd {0} && git log -n 1 --pretty=format:\"%H\"",g_config.repo_dir);
         child_process.exec(cmd, function(err,stdout,stderr)
@@ -629,9 +660,9 @@ function get_current_user_data(done)
         {
             error_log("failed to get user data. Running locally?");
             data = "";
-        } 
+        }
         done(err, data);
-    }); 
+    });
 }
 
 function get_aws_region(done)
