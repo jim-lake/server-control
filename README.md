@@ -41,8 +41,6 @@ API_GIT_HASH=6c3xxx12348e2e97560e0081d3bf44bdbfb8ifn3
       "Effect": "Allow",
       "Action": [
         "ec2:DescribeInstances",
-        "ec2:AssociateAddress",
-        "ec2: DisassociateAddress"
       ],
       "Resource": [
         "*"
