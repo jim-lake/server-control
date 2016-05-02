@@ -387,7 +387,7 @@ function update_service(req,res)
 
     var hash = required_prop(req,'hash');
 
-    var ami_id = req.param('ami_id',false);
+    var ami_id = req.body['ami_id'] || req.query['ami_id']; || false;
 
     var autoscaling = new AWS.AutoScaling();
     var service_data = false;
@@ -644,7 +644,7 @@ function error_log(msg)
 
 function required_prop(req,prop,is_sensitive)
 {
-    var v = req.param(prop);
+    var v = req.body[prop] || req.query[prop];
     if( typeof v == 'undefined' )
     {
         throw { code: 400, body: prop + " is required" };
