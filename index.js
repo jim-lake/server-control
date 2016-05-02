@@ -387,7 +387,7 @@ function update_service(req,res)
 
     var hash = required_prop(req,'hash');
 
-    var ami_id = req.body['ami_id'] || req.query['ami_id']; || false;
+    var ami_id = req.body['ami_id'] || req.query['ami_id'] || false;
 
     var autoscaling = new AWS.AutoScaling();
     var service_data = false;
