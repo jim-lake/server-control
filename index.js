@@ -65,29 +65,45 @@ function addRoutes(app,prefix)
     }
 
     app.get(prefix + '/service_data',
+        parse_query,
         body_parser.json(),
         body_parser.urlencoded({ extended: false }),
         cookie_parser(),
         secret_or_auth,
         service_data);
     app.get(prefix + '/update_service',
+        parse_query,
         body_parser.json(),
         body_parser.urlencoded({ extended: false }),
         cookie_parser(),
         secret_or_auth,
         update_service);
     app.get(prefix + '/server_version',
+        parse_query,
         body_parser.json(),
         body_parser.urlencoded({ extended: false }),
         cookie_parser(),
         secret_or_auth,
         server_version);
     app.get(prefix + '/update_server',
+        parse_query,
         body_parser.json(),
         body_parser.urlencoded({ extended: false }),
         cookie_parser(),
         secret_or_auth,
         update_server);
+}
+
+function parse_query(req,res,next) {
+    if (typeof req.query == 'string') {
+        var query = {};
+        _.each(req.query.split('&'),function(key_val) {
+            var split = key_val.split('=');
+            query[split[0]] = split[1] || "";
+        });
+        req.query = query;
+    }
+    next();
 }
 
 function secret_or_auth(req,res,next)
