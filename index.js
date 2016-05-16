@@ -12,9 +12,11 @@ exports.init = init;
 
 var g_config = {};
 
+var g_region = false;
+
 get_aws_region(function(err, region)
 {
-    AWS.config.update({region: region});
+    g_region = region;
 });
 
 var DEFAULT_CONFIG = {
@@ -241,7 +243,7 @@ function get_service_data(all_done)
     },
     function(done)
     {
-        var autoscaling = new AWS.AutoScaling();
+        var autoscaling = get_autoscaling();
         var params = {
             LaunchConfigurationNames: [ auto_scale_group.LaunchConfigurationName ],
         };
@@ -267,7 +269,7 @@ function get_service_data(all_done)
     },
     function(done)
     {
-        var ec2 = new AWS.EC2();
+        var ec2 = get_ec2();
         var params = {
             InstanceIds: _.pluck(auto_scale_group.Instances,'InstanceId'),
         };
@@ -405,7 +407,7 @@ function update_service(req,res)
 
     var ami_id = req.body['ami_id'] || req.query['ami_id'] || false;
 
-    var autoscaling = new AWS.AutoScaling();
+    var autoscaling = get_autoscaling();
     var service_data = false;
     var launch_config_name = false;
     var current_user_data = false;
@@ -574,8 +576,7 @@ function update_all_servers(hash,service_data,all_done)
 
 function get_auto_scale_group(instance_id,done)
 {
-    var autoscaling = new AWS.AutoScaling();
-
+    var autoscaling = get_autoscaling();
     autoscaling.describeAutoScalingGroups({}, function(err, data)
     {
         if( err )
@@ -706,6 +707,13 @@ function get_aws_region(done)
         }
         done(err,region)
     });
+}
+
+function get_autoscaling() {
+    return new AWS.AutoScaling({ region: g_region });
+}
+function get_ec2() {
+    return new AWS.EC2({ region: g_region });
 }
 
 function str_format()
