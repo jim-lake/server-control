@@ -293,6 +293,7 @@ function get_service_data(all_done)
                             instance_type: instance.InstanceType,
                             launch_datetime: instance.LaunchTime,
                             private_ip: instance.PrivateIpAddress,
+                            public_ip: instance.PublicIpAddress,
                         });
                     });
                 });
@@ -303,36 +304,10 @@ function get_service_data(all_done)
     function(done)
     {
         var query_list = _.where(instance_list,{ state: "running" });
-        async.each(query_list,function(instance,done2)
-        {
-            var url = str_format("{0}://{1}:{2}{3}server_version",g_config.http_proto,instance.private_ip,g_config.service_port,g_config.prefix);
-            var options = {
-                strictSSL: false,
-                url: url,
-                method: 'GET',
-                headers: {
-                    'x-sc-secret': g_config.secret,
-                },
-                json: {
-                    secret: g_config.secret,
-                },
-            };
-            request(options,function(err,response,body)
-            {
-                if( err )
-                {
-                    error_log("server_data: request err:",err);
-                }
-                else if( response.statusCode != 200 )
-                {
-                    error_log("server_data: request fail code:",response.statusCode);
-                    err = 'err_status_code';
-                }
-                else
-                {
-                    instance.git_commit_hash = body.git_commit_hash;
-                }
-                done2(err);
+        async.each(query_list,function(instance,done) {
+            get_server_version(instance,function(err,hash) {
+                instance.git_commit_hash = hash;
+                done(err);
             });
         }, done);
     }],
@@ -346,6 +321,33 @@ function get_service_data(all_done)
             instance_list: instance_list,
         };
         all_done(err,ret);
+    });
+}
+
+function get_server_version(instance,done) {
+    var url = str_format("{0}://{1}:{2}{3}server_version",g_config.http_proto,instance.private_ip,g_config.service_port,g_config.prefix);
+    var options = {
+        strictSSL: false,
+        url: url,
+        method: 'GET',
+        headers: {
+            'x-sc-secret': g_config.secret,
+        },
+        json: {
+            secret: g_config.secret,
+        },
+    };
+    request(options,function(err,response,body) {
+        var hash = false;
+        if( err ) {
+            error_log("server_data: request err:",err);
+        } else if( response.statusCode != 200 ) {
+            error_log("server_data: request fail code:",response.statusCode);
+            err = 'err_status_code';
+        } else {
+            hash = body.git_commit_hash;
+        }
+        done(err,hash);
     });
 }
 
@@ -529,7 +531,7 @@ function update_service(req,res)
     });
 }
 
-function update_all_servers(hash,service_data,all_done)
+function update_all_servers(hash,service_data,done)
 {
     async.each(service_data.instance_list,function(instance,done)
     {
@@ -539,40 +541,69 @@ function update_all_servers(hash,service_data,all_done)
         }
         else
         {
-            var url = str_format("{0}://{1}:{2}{3}update_server",g_config.http_proto,instance.private_ip,g_config.service_port,g_config.prefix);
-            var options = {
-                strictSSL: false,
-                url: url,
-                method: 'GET',
-                headers: {
-                    'x-sc-secret': g_config.secret,
-                },
-                json: {
-                    hash: hash,
-                    secret: g_config.secret,
-                },
-            };
-            request(options,function(err,response,body)
-            {
-                if( err )
-                {
-                    error_log("update_service: request err:",err);
-                }
-                else if( response.statusCode != 200 )
-                {
-                    error_log("update_service: request fail code:",response.statusCode);
-                    err = 'err_status_code';
-                }
-                done(err);
-            });
+            update_instance(hash,instance,done);
         }
     },
     function(err,results)
     {
-        all_done(err);
+        done(err);
     });
 }
 
+function update_instance(hash,instance,done) {
+
+    async.series([
+    function(done) {
+        var url = str_format("{0}://{1}:{2}{3}update_server",g_config.http_proto,instance.private_ip,g_config.service_port,g_config.prefix);
+        var options = {
+            strictSSL: false,
+            url: url,
+            method: 'GET',
+            headers: {
+                'x-sc-secret': g_config.secret,
+            },
+            json: {
+                hash: hash,
+                secret: g_config.secret,
+            },
+        };
+        request(options,function(err,response,body) {
+            if (err) {
+                error_log("update_service: request err:",err);
+            } else if( response.statusCode != 200 ) {
+                error_log("update_service: request fail code:",response.statusCode);
+                err = 'err_status_code';
+            }
+            done(err);
+        });
+    },
+    function(done) {
+        wait_for_server(instance,done);
+    },
+    ],done);
+}
+
+function wait_for_server(instance,done) {
+    var found_hash = false;
+    var count = 0;
+    var MAX_COUNT = 12;
+
+    async.until(function() {
+        return found_hash;
+    },function(done) {
+        count++;
+        get_server_version(instance,function(err,hash) {
+            if (!err && hash) {
+                found_hash = true;
+                done(null);
+            } else if (count > MAX_COUNT) {
+                done('too_many_tires');
+            } else {
+                setTimeout(done,10*1000);
+            }
+        });
+    },done);
+}
 
 function get_auto_scale_group(instance_id,done)
 {
