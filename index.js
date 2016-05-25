@@ -551,7 +551,6 @@ function update_all_servers(hash,service_data,done)
 }
 
 function update_instance(hash,instance,done) {
-
     async.series([
     function(done) {
         var url = str_format("{0}://{1}:{2}{3}update_server",g_config.http_proto,instance.private_ip,g_config.service_port,g_config.prefix);
@@ -578,12 +577,17 @@ function update_instance(hash,instance,done) {
         });
     },
     function(done) {
-        wait_for_server(instance,done);
+        var opts = {
+            instance: instance,
+            hash: hash,
+        };
+        wait_for_server(opts,done);
     },
     ],done);
 }
 
-function wait_for_server(instance,done) {
+function wait_for_server(params,done) {
+    var instance = params.instance;
     var found_hash = false;
     var count = 0;
     var MAX_COUNT = 12;
@@ -593,7 +597,7 @@ function wait_for_server(instance,done) {
     },function(done) {
         count++;
         get_server_version(instance,function(err,hash) {
-            if (!err && hash) {
+            if (!err && hash && hash == params.hash) {
                 found_hash = true;
                 done(null);
             } else if (count > MAX_COUNT) {
