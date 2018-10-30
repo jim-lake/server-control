@@ -1,19 +1,19 @@
 #!/bin/bash
- 
+
 if [ "$#" -lt 1 ]; then
     echo "Usage: $1 <hash> [revert_hash]"
     exit 1
 fi
- 
+
 echo "Discard any local changes"
-git checkout -f 
+git checkout -f
 echo "Checkout master"
 git checkout -q master
 if [ "$?" -ne 0 ]; then
     echo " - Checkout master failed."
     exit 1
 fi
- 
+
 echo "Pulling latest."
 git pull
 if [ "$?" -ne 0 ]; then
@@ -35,6 +35,7 @@ if [ "$?" -ne 0 ]; then
     fi
     exit 1
 else
+    git reset --hard
     npm install
 fi
 exit 0
