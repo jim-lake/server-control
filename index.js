@@ -145,7 +145,10 @@ function server_version(req,res)
         }
         else
         {
-            res.send({ git_commit_hash: results } );
+            res.send({
+                git_commit_hash: results,
+                uptime: process.uptime(),
+            });
         }
     });
 }
@@ -305,8 +308,9 @@ function get_service_data(all_done)
     {
         var query_list = _.where(instance_list,{ state: "running" });
         async.each(query_list,function(instance,done) {
-            get_server_version(instance,function(err,hash) {
-                instance.git_commit_hash = hash;
+            get_server_data(instance,function(err,body) {
+                instance.git_commit_hash = body.git_commit_hash;
+                instance.uptime = body.uptime;
                 done(err);
             });
         }, done);
@@ -324,7 +328,7 @@ function get_service_data(all_done)
     });
 }
 
-function get_server_version(instance,done) {
+function get_server_data(instance,done) {
     var url = str_format("{0}://{1}:{2}{3}server_version",g_config.http_proto,instance.private_ip,g_config.service_port,g_config.prefix);
     var options = {
         strictSSL: false,
@@ -338,16 +342,13 @@ function get_server_version(instance,done) {
         },
     };
     request(options,function(err,response,body) {
-        var hash = false;
         if( err ) {
             error_log("server_data: request err:",err);
         } else if( response.statusCode != 200 ) {
             error_log("server_data: request fail code:",response.statusCode);
             err = 'err_status_code';
-        } else {
-            hash = body.git_commit_hash;
         }
-        done(err,hash);
+        done(err,body);
     });
 }
 
@@ -596,8 +597,8 @@ function wait_for_server(params,done) {
         return found_hash;
     },function(done) {
         count++;
-        get_server_version(instance,function(err,hash) {
-            if (!err && hash && hash == params.hash) {
+        get_server_data(instance,function(err,body) {
+            if (!err && body && body.git_commit_hash == params.hash) {
                 found_hash = true;
                 done(null);
             } else if (count > MAX_COUNT) {
