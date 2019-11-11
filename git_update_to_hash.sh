@@ -36,6 +36,6 @@ if [ "$?" -ne 0 ]; then
     exit 1
 else
     git reset --hard
-    npm install
+    npm ci
 fi
 exit 0
