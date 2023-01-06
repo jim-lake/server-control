@@ -63,4 +63,19 @@ API_GIT_HASH=6c3xxx12348e2e97560e0081d3bf44bdbfb8ifn3
 }
 ```
 
+* If your config has a role, you'll also need to add passrole
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "iam:PassRole",
+            "Resource": "arn:aws:iam::<account>:role/<role>"
+        }
+    ]
+}
+```
+
 * launch!
