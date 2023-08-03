@@ -47,13 +47,22 @@ API_GIT_HASH=6c3xxx12348e2e97560e0081d3bf44bdbfb8ifn3
       ]
     },
     {
+      "Sid": "Stmt1412101976001",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeLaunchTemplateVersions",
+        "ec2:ModifyLaunchTemplate",
+        "ec2:CreateLaunchTemplateVersion"
+      ],
+      "Resource": [
+        "*"
+      ]
+    },
+    {
       "Sid": "Stmt1412102095000",
       "Effect": "Allow",
       "Action": [
-        "autoscaling:CreateLaunchConfiguration",
-        "autoscaling:DescribeAutoScalingGroups",
-        "autoscaling:DescribeLaunchConfigurations",
-        "autoscaling:UpdateAutoScalingGroup"
+        "autoscaling:DescribeAutoScalingGroups"
       ],
       "Resource": [
         "*"
