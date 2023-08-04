@@ -1,6 +1,6 @@
 {
   "name": "server-control",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Easy updating of Amazon AWS instances inside of an Autoscale Group",
   "main": "src/index.js",
   "scripts": {

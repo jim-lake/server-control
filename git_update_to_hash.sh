@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ "$#" -lt 1 ]; then
-    echo "Usage: $1 <hash> [revert_hash]"
+    echo "Usage: $1 <hash> [revert_hash] [no_ci]"
     exit 1
 fi
 
@@ -36,6 +36,10 @@ if [ "$?" -ne 0 ]; then
     exit 1
 else
     git reset --hard
-    npm ci
+    if [ "$2" -eq "no_ci" ]; then
+        npm install
+    else
+        npm ci
+    fi
 fi
 exit 0

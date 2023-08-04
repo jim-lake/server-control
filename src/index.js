@@ -24,6 +24,7 @@ const DEFAULT_CONFIG = {
   error_log: console.error,
   update_launch_default: true,
   asg_name: '',
+  no_ci: false,
 };
 const g_config = {};
 let g_gitCommitHash = false;
@@ -331,7 +332,11 @@ function _updateSelf(hash, done) {
         });
       },
       (done) => {
-        const cmd = `cd ${g_config.repo_dir} && ${__dirname}/../git_update_to_hash.sh ${hash} ${revert_hash}`;
+        const cmd = `cd ${
+          g_config.repo_dir
+        } && ${__dirname}/../git_update_to_hash.sh ${hash} ${revert_hash} ${
+          g_config.no_ci ? 'no_ci' : ''
+        }`;
         child_process.exec(cmd, function (err, stdout, stderr) {
           if (err) {
             _errorLog(
